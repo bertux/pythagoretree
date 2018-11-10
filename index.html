@@ -1,0 +1,238 @@
+<!DOCTYPE HTML>
+<html lang="fr">
+
+<head>
+  <title>Fractales</title>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="style.css" />
+  <meta name="Description" content="Animation Arbre de Pythagore">
+  <meta name="Keywords" content="Mathématiques, vulgarisation, fractales, arbre de Pythagore">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script language="JavaScript">
+
+var l;// largeur du canvas
+var h;// hauteur du canvas
+var w;// côté du carré initial
+var x;
+var y;
+var theta=1;//l'angle gauche du triangle rectangle
+var rap1,rap2;// les rapports des deux similitudes
+var a1,b1,c1,d1,e1,f1,a2,b2,c2,d2,e2,f2;// coefficients des matrices des deux similitudes
+var k=17;//gère la variance des pas de la marche aléatoire des couleurs
+
+// couleurs initiales
+var ri,gi,bi;
+
+// gérer les étapes de l'algorithme
+var step=0;
+
+// gérer le temps de tracer l'arbre
+const attend=0;
+const pret=1;
+var etat=attend;
+
+function init() {
+ var htmlCanvas=document.getElementById("canvas_principal");
+
+
+ document.getElementById("image_accueil").style.visibility="visible";
+ document.getElementById("image_accueil").width=window.innerWidth;
+
+ document.getElementById("bouton_reset").style.top=(window.innerHeight-160)+"px";
+ //document.getElementById("bouton_aide").style.top="65px";
+ //document.getElementById("bouton_arrosoir").style.top="215px";
+ cache_aide();
+ efface_histogramme("canvas_principal");
+ // Adapter les dimensions à la fenêtre
+ l=window.innerWidth-80;
+ h=window.innerHeight-80;
+ w=window.innerHeight/7;// côté du carré initial
+ x=(l-w)/2;
+ y=0.85*h-w;
+ htmlCanvas.width=l;
+ htmlCanvas.height=h;
+
+  // gestion de ce qui se passe quand on clique sur le canvas
+  htmlCanvas.addEventListener('click', function(evt) {
+	clickCanvas(htmlCanvas,evt);//on appelle la fonction extérieure clickCanvas
+      }, false);
+
+ // choix aléatoire de la couleur initiale
+ ri=Math.floor(Math.random()*180);
+ gi=Math.floor(Math.random()*180);
+ bi=Math.floor(Math.random()*180);
+
+
+  step=0;
+
+ //Tracer le demi-cercle, lieu des sommets de l'angle droit du triangle rectangle
+ var ctx=htmlCanvas.getContext("2d");
+ ctx.beginPath();
+ ctx.strokeStyle="rgba("+ri+","+gi+","+bi+",0.5)";
+  ctx.lineWidth = 2;
+ ctx.arc(x+w/2,y,w/2,-Math.PI,0);
+ ctx.stroke();
+
+  //Tracer l'hypothénuse du triangle rectangle
+  ctx.beginPath();
+  ctx.moveTo(x,y);
+  ctx.lineTo(x+w,y);
+  ctx.stroke();
+
+ //Rendre le bouton arrosoir inactif
+  document.getElementById("bouton_arrosoir").className="bouton_inactif";
+  etat=attend;
+  document.getElementById("bouton_reset").className="bouton_inactif";
+}
+
+function efface_histogramme(nom_canvas){
+  var dessin = document.getElementById(nom_canvas);
+  var ctx = dessin.getContext("2d");
+  ctx.clearRect(0, 0, dessin.width, dessin.height);
+}
+
+function calcule_coef() {
+//première similitude
+    rap1=Math.cos(theta);
+    a1=rap1*Math.cos(theta);
+    b1=-rap1*Math.sin(theta);
+    c1=rap1*Math.sin(theta);
+    d1=rap1*Math.cos(theta);
+    e1=x*(1-a1)-c1*y-c1*w;
+    f1=y*(1-d1)-b1*x-d1*w;
+//deuxième similitude
+    rap2=Math.sin(theta);
+    a2=rap2*Math.sin(theta);
+    b2=rap2*Math.cos(theta);
+    c2=-rap2*Math.cos(theta);
+    d2=rap2*Math.sin(theta);
+    e2=(x+w)*(1-a2)-c2*y-c2*w;
+    f2=y*(1-d2)-b2*x-(b2+d2)*w;
+}
+
+function cache_accueil() {
+  document.getElementById("image_accueil").style.visibility="hidden";
+}
+
+function trace_arbre(prof,rap,m1,m2,m3,m4,m5,m6,r,g,b) {
+    if (rap*w>0.5){//Pas la peine de continuer si la taille atteinte ici est beaucoup plus petite qu'un pixel !!!
+	var htmlCanvas=document.getElementById("canvas_principal");
+	var ctx=htmlCanvas.getContext("2d");
+	ctx.fillStyle="rgb("+r+","+g+","+b+")";
+	ctx.setTransform(m1,m2,m3,m4,m5,m6);
+	if (prof>=1) {
+	  //branche de gauche
+	  //Nouvelles couleurs
+	  var nr=r-k;
+	  if (nr<0) {nr=0;}
+	  var ng=g+k;
+	  if (ng>255) {ng=255};
+	  var nb=b+k;
+	  if (nb>255) {nb=255};  trace_arbre(prof-1,rap*rap1,a1*m1+c1*m2,b1*m1+d1*m2,a1*m3+c1*m4,b1*m3+d1*m4,a1*m5+c1*m6+e1,b1*m5+d1*m6+f1,nr,ng,nb);
+	  //branche de droite
+	  nr=r+k;
+	  if (nr>255) {nr=255};
+	  ng=g-k;
+	  if (ng<0) {ng=0};
+	  nb=b-k;
+	  if (nb<0) {nb=0};
+	  trace_arbre(prof-1,rap*rap2,a2*m1+c2*m2,b2*m1+d2*m2,a2*m3+c2*m4,b2*m3+d2*m4,a2*m5+c2*m6+e2,b2*m5+d2*m6+f2,nr,ng,nb);
+	}
+	else {  // prof=1 ici : on est arrivé à la profondeur voulue
+	  ctx.fillRect(x,y,w,w);// On ne trace que la dernière rangée de feuilles !!!
+	  etat=pret;
+          document.getElementById("bouton_arrosoir").className="bouton_actif";
+	}
+  }
+}
+
+// fonction appelée quand on clique sur le canvas
+function clickCanvas(can,e){
+  if (step==0){ // Choix du sommet de l'angle droit
+      var rect = can.getBoundingClientRect();//pour avoir les coordonnées relatives au canvas
+      var cx=e.clientX - rect.left;
+      var cy=e.clientY - rect.top;
+      if (cy<y){
+	  var dist=Math.sqrt((cx-x-w/2)*(cx-x-w/2) + (cy-y)*(cy-y)) // distance au milieu de l'hypothénuse
+	  if (Math.abs(dist-w/2)<w/6){
+		//coordonnées du sommet de l'angle droit, sur le demi-cercle
+		var px = x+w/2+(cx-x-w/2)*w/(2*dist);
+		var py = y+(cy-y)*w/(2*dist);
+
+		//tracé des deux côtés de l'angle droit
+		var ctx=can.getContext("2d");
+		ctx.beginPath();
+		ctx.moveTo(x,y);
+		ctx.lineTo(px,py);
+		ctx.lineTo(x+w,y);
+		ctx.lineWidth = 2;
+		ctx.strokeStyle="rgba("+ri+","+gi+","+bi+",0.5)";
+		ctx.stroke();
+
+		//calcul de theta
+		theta=Math.acos((cx-x-w/2)/dist)/2;
+		calcule_coef();
+		//ctx.fillStyle = 'black';
+		//ctx.fillText("theta = "+theta, 10, 25);
+		step=1;
+		//rendre le bouton arrosoir bouton_actif
+		document.getElementById("bouton_arrosoir").className="bouton_actif";
+		etat=pret;
+		document.getElementById("bouton_reset").className="bouton_actif";
+	  }
+      }
+  }
+}
+
+function pousse(){
+  if ((step>0)&&(etat==pret)){
+    document.getElementById("bouton_arrosoir").className="bouton_inactif";
+    etat=attend;
+    trace_arbre(step-1,1,1,0,0,1,0,0,ri,gi,bi);
+    step++;
+  }
+}
+
+
+
+function affiche_aide(){
+  document.getElementById("aide").style.visibility="visible";
+}
+
+function cache_aide(){
+  document.getElementById("aide").style.visibility="hidden";
+}
+
+</script>
+
+
+
+
+</head>
+
+<body  onload='init()'>
+
+
+	  <img id="image_accueil" src="image_accueil.png" title="cliquer pour commencer" class="visible" onClick='cache_accueil()'>
+
+    <div id="menu_gauche" class="menu_cache_initial">
+        <img src="bouton_aide.png" class="bouton_actif" id='bouton_aide' onClick="affiche_aide()"  title="Afficher l'aide">
+        <img src="arrosoir.png" class="bouton_inactif" id='bouton_arrosoir' onClick="pousse()"  title="Faire pousser l'arbre">
+        <img src="bouton_reset.png" id="bouton_reset" class="bouton_actif" title="recommencer au début" onClick="init()">
+    </div> <!--menu_gauche-->
+
+    <canvas id="canvas_principal">
+    </canvas>
+
+
+
+	<div id="aide" class="fenetre_aide">
+	    <img src="bouton_close.png" id="bouton_aide_ferme" onClick="cache_aide()">
+	    <p class="paragraphe_aide">Choisir d'abord un triangle rectangle, en indiquant sur le demi-cercle où est le sommet de l'angle droit (l'hypothénuse sera le diamètre du demi-cercle).</p>
+	    <p class="paragraphe_aide">Utiliser ensuite le bouton arrosoir pour faire pousser l'arbre de Pythagore...</p>
+	</div> <!--aide-->
+
+</body>
+
+</html>
